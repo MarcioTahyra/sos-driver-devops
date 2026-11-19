@@ -142,8 +142,6 @@ jobs:
       - terraform
       - docker
     runs-on: ubuntu-latest
-    outputs:
-      image: ${{ steps.image.outputs.name }}
     steps:
       - name: Checkout approved commit
         uses: actions/checkout@v4
@@ -155,11 +153,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Define image tag
-        id: image
-        run: |
-          echo "name=marciotahyra/sos-driver-api:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Build approved image
         run: |
@@ -181,10 +174,17 @@ jobs:
       group: sos-driver-production
       cancel-in-progress: false
     env:
-      DEPLOY_IMAGE: ${{ needs.publish.outputs.image }}
+      DEPLOY_IMAGE: marciotahyra/sos-driver-api:${{ github.sha }}
+
     steps:
+      - name: Validate image reference
+        run: |
+          test -n "$DEPLOY_IMAGE"
+          echo "Imagem aprovada: $DEPLOY_IMAGE"
+
       - name: Pull approved image
-        run: docker pull "$DEPLOY_IMAGE"
+        run: |
+          docker pull "$DEPLOY_IMAGE"
 
       - name: Replace application container
         run: |
