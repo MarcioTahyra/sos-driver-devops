@@ -55,8 +55,6 @@ jobs:
           fetch-depth: 0
 
       - name: Scan repository for secrets
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           curl -fsSL \
             https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz \
@@ -127,12 +125,17 @@ jobs:
       - name: Build Docker image
         run: docker build -t sos-driver-api:ci .
 
+      - name: Install Trivy
+        run: |
+          curl -fsSL \
+            https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.69.3
+
       - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@0.33.1
-        with:
-          image-ref: sos-driver-api:ci
-          format: table
-          exit-code: "1"
-          ignore-unfixed: true
-          severity: HIGH,CRITICAL
-          scanners: vuln
+        run: |
+          trivy image \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            sos-driver-api:ci
