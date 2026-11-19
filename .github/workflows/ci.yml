@@ -44,6 +44,52 @@ jobs:
       - name: Audit dependencies
         run: pip-audit -r requirements.txt
 
+  gitleaks:
+    name: Gitleaks - Secret Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan repository for secrets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsSL \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz \
+            -o gitleaks.tar.gz
+
+          mkdir -p /tmp/gitleaks
+          tar -xzf gitleaks.tar.gz -C /tmp/gitleaks gitleaks
+
+          /tmp/gitleaks/gitleaks git \
+            --redact \
+            --exit-code 1 \
+            --verbose \
+            .
+
+  semgrep:
+    name: Semgrep - SAST
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Semgrep
+        run: python -m pip install semgrep
+
+      - name: Run Semgrep security rules
+        run: semgrep scan --config p/security-audit --error app
+
   terraform:
     name: Terraform - Validation
     runs-on: ubuntu-latest
@@ -71,7 +117,7 @@ jobs:
         run: terraform validate
 
   docker:
-    name: Docker - Build
+    name: Docker - Build and Trivy Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -80,3 +126,13 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t sos-driver-api:ci .
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: sos-driver-api:ci
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          scanners: vuln
