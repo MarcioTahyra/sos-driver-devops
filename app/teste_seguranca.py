@@ -1,4 +1,5 @@
 import subprocess
 
-def executar_comando(comando: str) -> None:
-    subprocess.run(comando, shell=True, check=True)
+
+def executar_comando(argumentos: list[str]) -> None:
+    subprocess.run(argumentos, shell=False, check=True)
