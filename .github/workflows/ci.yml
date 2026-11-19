@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   python-security:
-    name: Python - Quality and Security
+    name: Python - Tests and Security
     runs-on: ubuntu-latest
 
     steps:
@@ -26,14 +26,17 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Install dependencies and security tools
+      - name: Install dependencies and tools
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install bandit pip-audit
+          python -m pip install -r requirements.txt
+          python -m pip install pytest httpx bandit pip-audit
 
       - name: Check Python syntax
-        run: python -m compileall -q app
+        run: python -m compileall -q app tests
+
+      - name: Run automated API tests
+        run: python -m pytest -v
 
       - name: Run Bandit security scan
         run: bandit -r app -ll
